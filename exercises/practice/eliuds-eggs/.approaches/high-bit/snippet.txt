@@ -1,0 +1,4 @@
+    mov r8, 0
+
+    shl rdi, 1
+    adc rax, r8

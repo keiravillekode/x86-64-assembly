@@ -1,0 +1,4 @@
+    mov r8, rdi
+    neg r8
+    and r8, rdi
+    xor rdi, r8

@@ -1,0 +1,45 @@
+{
+  "introduction": {
+    "authors": [
+      "keiravillekode"
+    ]
+  },
+  "approaches": [
+    {
+      "uuid": "3b638b78-9dc0-461c-b001-20d3cf58ec21",
+      "slug": "high-bit",
+      "title": "High bit",
+      "blurb": "Shift the most significant bit into the carry flag",
+      "authors": [
+        "keiravillekode"
+      ]
+    },
+    {
+      "uuid": "0250770d-94b6-4d39-a196-52b9a0574a19",
+      "slug": "low-bit",
+      "title": "Low bit",
+      "blurb": "Increment the count if the least significant bit is set",
+      "authors": [
+        "keiravillekode"
+      ]
+    },
+    {
+      "uuid": "0634912c-7e8b-446d-82f4-950e111a9b92",
+      "slug": "lowest-one",
+      "title": "Lowest one",
+      "blurb": "Find the least significant bit that is set to one",
+      "authors": [
+        "keiravillekode"
+      ]
+    },
+    {
+      "uuid": "f6485f27-7cc7-4519-8404-028281ab82b6",
+      "slug": "table-lookup",
+      "title": "Table lookup",
+      "blurb": "Read from a pre-computed table of bit counts",
+      "authors": [
+        "keiravillekode"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+    lea rbx, [table]
+
+    mov cl, dl
+    add al, byte [rbx + rcx]

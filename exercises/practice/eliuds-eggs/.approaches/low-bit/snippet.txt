@@ -1,0 +1,4 @@
+    mov r8, rax
+    inc r8
+    test rdi, 1
+    cmovnz rax, r8
