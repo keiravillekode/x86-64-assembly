@@ -1,58 +1,99 @@
+;
+; Count the occurrences of each nucleotide in a DNA strand.
+;
+; Parameters:
+;   rdi - strand
+;   rsi - counts array ([A, C, G, T] as int64_t x 4)
+; On invalid input (a character that isn't A, C, G or T) all four counts
+; are set to -1.
+;
+; Implementation note: AVX-512 processes 64 bytes per iteration.
+;   Each chunk is compared against four broadcast nucleotide values plus
+;   zero, yielding five 64-bit mask registers. popcnt of each of the four
+;   nucleotide masks — restricted to bits below the null terminator —
+;   accumulates per-letter totals. If any byte before the null belongs to
+;   none of the five categories, the strand is invalid.
+;
 section .text
 global nucleotide_counts
-
-; rdi - address of strand string
-; rsi - address of counts array
-; cl - current character
-; r8 - adenine count
-; r9 - cytosine count
-; r10 - guanine count
-; r11 - thymine count
 nucleotide_counts:
-    xor r8, r8                ; Current adenine count is 0
-    xor r9, r9                ; Current cytosine count is 0
-    xor r10, r10              ; Current guanine count is 0
-    xor r11, r11              ; Current thymine count is 0
-    jmp .read
+    xor r8d, r8d                   ; A count
+    xor r9d, r9d                   ; C count
+    xor r10d, r10d                 ; G count
+    xor r11d, r11d                 ; T count
 
-.adenine:
-    inc r8
-    jmp .read
+    vpxord zmm5, zmm5, zmm5        ; zero, for null detection
+    mov eax, 'A'
+    vpbroadcastb zmm1, eax
+    mov eax, 'C'
+    vpbroadcastb zmm2, eax
+    mov eax, 'G'
+    vpbroadcastb zmm3, eax
+    mov eax, 'T'
+    vpbroadcastb zmm4, eax
 
-.cytosine:
-    inc r9
-    jmp .read
+.loop:
+    vmovdqu8 zmm0, [rdi]
+    vpcmpeqb k6, zmm0, zmm5        ; nulls
+    vpcmpeqb k1, zmm0, zmm1        ; A
+    vpcmpeqb k2, zmm0, zmm2        ; C
+    vpcmpeqb k3, zmm0, zmm3        ; G
+    vpcmpeqb k4, zmm0, zmm4        ; T
 
-.guanine:
-    inc r10
-    jmp .read
+    kmovq rcx, k6
+    tzcnt rcx, rcx                 ; first null position (64 if none)
 
-.thymine:
-    inc r11
+    ; Detect any byte that's neither a nucleotide nor a null, before the null.
+    korq k7, k1, k2
+    korq k7, k7, k3
+    korq k7, k7, k4
+    korq k7, k7, k6
+    kmovq rax, k7
+    not rax                        ; 1 where byte is "other"
+    bzhi rax, rax, rcx             ; restrict to bits below the null
+    test rax, rax
+    jnz .invalid
 
-.read:
-    mov cl, byte [rdi]        ; Load strand character
-    inc rdi
-    cmp cl, 'A'
-    je .adenine
-    cmp cl, 'C'
-    je .cytosine
-    cmp cl, 'G'
-    je .guanine
-    cmp cl, 'T'
-    je .thymine
-    cmp cl, 0
-    je .report                ; Check if we have reached end of string
+    kmovq rdx, k1
+    bzhi rdx, rdx, rcx
+    popcnt rdx, rdx
+    add r8, rdx
+
+    kmovq rdx, k2
+    bzhi rdx, rdx, rcx
+    popcnt rdx, rdx
+    add r9, rdx
+
+    kmovq rdx, k3
+    bzhi rdx, rdx, rcx
+    popcnt rdx, rdx
+    add r10, rdx
+
+    kmovq rdx, k4
+    bzhi rdx, rdx, rcx
+    popcnt rdx, rdx
+    add r11, rdx
+
+    cmp rcx, 64
+    je .advance
+    jmp .report
+
+.advance:
+    add rdi, 64
+    jmp .loop
+
+.invalid:
     mov r8, -1
     mov r9, -1
     mov r10, -1
     mov r11, -1
 
 .report:
-    mov qword [rsi], r8       ; Report adenine count
-    mov qword [rsi+8], r9     ; Report cytosine count
-    mov qword [rsi+16], r10   ; Report guanine count
-    mov qword [rsi+24], r11   ; Report thymine count
+    mov [rsi], r8
+    mov [rsi+8], r9
+    mov [rsi+16], r10
+    mov [rsi+24], r11
+    vzeroupper
     ret
 
 %ifidn __OUTPUT_FORMAT__,elf64
